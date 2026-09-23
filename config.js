@@ -88,6 +88,9 @@ module.exports = {
   AUTH_PASS: env('AUTH_PASS', ''),
   // 登录有效期（天），到期后需重新登录
   AUTH_TTL_DAYS: envInt('AUTH_TTL_DAYS', 7),
+  // 额外放行的来源主机（逗号分隔）。默认空 = 只信任本机与各网卡 IP。
+  // 仅在反向代理 / 自定义域名访问时才需要配置，否则会被来源守卫拒绝（403）。
+  ALLOWED_ORIGINS: env('ALLOWED_ORIGINS', ''),
 
   // 目录
   HTML_PATH: path.join(__dirname, 'public', 'index.html'),

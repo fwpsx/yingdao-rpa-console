@@ -4,7 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
-const { sendJson, readBody, ensureDir } = require('../lib/utils');
+const fsp = fs.promises;
+const { sendJson, readJsonBody, ensureDir } = require('../lib/utils');
 const { exportTriggers, matchTriggers, importTriggers } = require('../lib/business');
 
 const routes = [
@@ -18,15 +19,14 @@ const routes = [
 
   // 列出备份文件
   {
-    method: 'GET', pattern: /^\/api\/migration\/backups$/, handler: (req, res) => {
+    method: 'GET', pattern: /^\/api\/migration\/backups$/, handler: async (req, res) => {
       ensureDir(config.BACKUP_DIR);
-      const files = fs.readdirSync(config.BACKUP_DIR)
-        .filter((f) => f.endsWith('.json'))
-        .map((f) => {
-          const st = fs.statSync(path.join(config.BACKUP_DIR, f));
-          return { name: f, size: st.size, mtime: st.mtime.toISOString() };
-        })
-        .sort((a, b) => b.mtime.localeCompare(a.mtime));
+      // 用异步 fs：原 readdirSync + 逐个 statSync 会在请求路径上阻塞事件循环
+      const names = (await fsp.readdir(config.BACKUP_DIR)).filter((f) => f.endsWith('.json'));
+      const files = (await Promise.all(names.map(async (f) => {
+        const st = await fsp.stat(path.join(config.BACKUP_DIR, f));
+        return { name: f, size: st.size, mtime: st.mtime.toISOString() };
+      }))).sort((a, b) => b.mtime.localeCompare(a.mtime));
       sendJson(res, 200, { ok: true, files });
     },
   },
@@ -34,7 +34,7 @@ const routes = [
   // 删除备份文件
   {
     method: 'POST', pattern: /^\/api\/migration\/backups\/delete$/, handler: async (req, res) => {
-      const body = JSON.parse(await readBody(req));
+      const body = await readJsonBody(req);
       if (!body.file) { sendJson(res, 400, { ok: false, error: 'file 必填' }); return; }
       const safe = path.basename(body.file);
       if (!safe.endsWith('.json')) { sendJson(res, 400, { ok: false, error: '仅支持删除 .json 备份文件' }); return; }
@@ -49,7 +49,7 @@ const routes = [
   {
     method: 'POST', pattern: /^\/api\/migration\/backups\/upload$/, handler: async (req, res) => {
       ensureDir(config.BACKUP_DIR);
-      const body = JSON.parse(await readBody(req));
+      const body = await readJsonBody(req);
       if (!body.content) { sendJson(res, 400, { ok: false, error: 'content 必填（备份 JSON 字符串）' }); return; }
       let parsed;
       try { parsed = JSON.parse(body.content); } catch (e) { sendJson(res, 400, { ok: false, error: 'JSON 解析失败: ' + e.message }); return; }
@@ -63,7 +63,7 @@ const routes = [
   // 名称匹配
   {
     method: 'POST', pattern: /^\/api\/migration\/match$/, handler: async (req, res) => {
-      const body = JSON.parse(await readBody(req));
+      const body = await readJsonBody(req);
       if (!body.file) { sendJson(res, 400, { ok: false, error: 'file 必填' }); return; }
       const r = await matchTriggers(body.file);
       sendJson(res, 200, r);
@@ -73,7 +73,7 @@ const routes = [
   // 导入（支持 dry-run）
   {
     method: 'POST', pattern: /^\/api\/migration\/import$/, handler: async (req, res) => {
-      const body = JSON.parse(await readBody(req));
+      const body = await readJsonBody(req);
       if (!body.file) { sendJson(res, 400, { ok: false, error: 'file 必填' }); return; }
       const r = await importTriggers(body.file, body.assignments || {}, body.dryRun);
       sendJson(res, 200, r);

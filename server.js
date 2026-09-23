@@ -11,17 +11,24 @@ const http = require('http');
 const path = require('path');
 const config = require('./config');
 const auth = require('./lib/auth');
+const guard = require('./lib/guard');
 const { dispatch } = require('./routes');
 const { sendJson } = require('./lib/utils');
 const { ensureDir, getLanIP } = require('./lib/utils');
 
 const server = http.createServer(async (req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Max-Age', '86400');
+  // 来源守卫（必须早于业务处理）：
+  //   Host 校验挡 DNS rebinding；Origin 校验挡「本机浏览器里的恶意网页」跨域调用本服务。
+  if (!guard.hostAllowed(req.headers.host)) {
+    sendJson(res, 403, { ok: false, error: 'Host 不被允许：' + (req.headers.host || '(空)') });
+    return;
+  }
+  guard.applyCors(req, res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (!guard.originAllowed(req.headers.origin)) {
+    sendJson(res, 403, { ok: false, error: '来源不被允许：' + req.headers.origin });
+    return;
+  }
 
   const url = new URL(req.url, `http://${config.HOST}:${config.PORT}`);
   const p = url.pathname;
@@ -42,7 +49,8 @@ const server = http.createServer(async (req, res) => {
       res.end('Not found');
     }
   } catch (e) {
-    sendJson(res, 500, { ok: false, error: e.message });
+    // 客户端错误（如非法 JSON 体）自带 status，按 4xx 返回；其余仍按 500
+    sendJson(res, (e && e.status) || 500, { ok: false, error: e.message });
   }
 });
 

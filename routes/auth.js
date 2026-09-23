@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { cachedCli, runCli, clearCache } = require('../lib/cli');
-const { sendJson, readBody } = require('../lib/utils');
+const { sendJson, readJsonBody } = require('../lib/utils');
 
 // 影刀客户端进程名（杀 Shell 主进程后附属进程会自行退出，这里一并清理）
 const SHADOWBOT_PROCESSES = [
@@ -124,7 +124,7 @@ const routes = [
   // 切换登录：杀影刀进程 → auth login 到目标账号 → 轮询确认
   {
     method: 'POST', pattern: /^\/api\/auth\/switch$/, handler: async (req, res) => {
-      const body = JSON.parse(await readBody(req));
+      const body = await readJsonBody(req);
       if (!body.username) { sendJson(res, 400, { ok: false, error: 'username 必填' }); return; }
 
       // 0. 切换前检测：运行中任务 / Studio 编辑占用时拒绝切换

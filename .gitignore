@@ -8,6 +8,7 @@ backups/
 
 # ===== 运行时产物 =====
 node_modules/
+.learnings/
 *.log
 npm-debug.log*
 .DS_Store
