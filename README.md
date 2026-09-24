@@ -18,7 +18,7 @@
 | 消息中心 | 已读/未读、标记已读、全部已读 |
 | 扩展管理 | 扩展列表与安装状态 |
 | 系统设置 | 配置管理、console/assistant 模式切换 |
-| 访问鉴权 | 账号密码登录（单管理员），登录态默认 7 天，支持「记住登录」与「退出登录」 |
+| 访问鉴权 | 账号密码登录（单管理员），登录态自动持久化、默认 7 天，支持「退出登录」 |
 
 ## 目录结构
 
@@ -183,9 +183,12 @@ AUTH_TTL_DAYS=7
 
 ## API 端点
 
+> **鉴权范围**：除 `POST /api/login` 外，**所有 `/api/*` 端点都受登录鉴权保护**，需在请求头带 `X-Auth-Token`（值为 `/api/login` 返回的 token），未携带或已失效时返回 `401`。
+> 另外所有请求都会先过「来源守卫」（校验 `Host` 与 `Origin`），来源不属于本机或本机网卡 IP 时返回 `403`。
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/` | 控制台页面 |
+| GET | `/` | 控制台页面（静态资源，不受鉴权保护） |
 | GET | `/api/health` | 健康检查（含局域网 IP） |
 | POST | `/api/login` | 控制台登录（账号密码 → 签发带有效期的 token） |
 | POST | `/api/exec` | 通用 CLI 执行（白名单） |
@@ -196,7 +199,7 @@ AUTH_TTL_DAYS=7
 | GET | `/api/tasks` | 任务历史 |
 | GET | `/api/tasks/:id/logs` | 任务日志 |
 | GET | `/api/tasks/:id/video` | 视频回放文件查询 |
-| GET | `/api/tasks/:id/video/open` | 打开视频播放器 |
+| POST | `/api/tasks/:id/video/open` | 打开视频播放器（在服务器上启动播放器，有副作用故用 POST） |
 | GET | `/api/auth/accounts` | 记住的账号列表 |
 | POST | `/api/auth/switch` | 切换账号（关停影刀进程后重新登录目标账号；切换前检测运行中任务/Studio 编辑，占用则拒绝） |
 | POST | `/api/migration/export` | 导出当前账号触发器 |

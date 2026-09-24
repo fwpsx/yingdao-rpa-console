@@ -8,8 +8,17 @@ const config = require('../config');
 const { rest, restReady, REST_MAX_PAGE_SIZE, isTruncatedPage } = require('../lib/rest');
 const { cachedCli } = require('../lib/cli');
 const fsp = fs.promises;
-const { sendJson } = require('../lib/utils');
+const { sendJson, isUuid } = require('../lib/utils');
 const { normTask, checkAccountSwitch } = require('../lib/business');
+
+// 校验 URL 里的 taskId：必须是 UUID。
+// 它会被拼进 REST 路径（/tasks/<id>/logs）或用于匹配录屏文件名；
+// 路由 pattern 的 [^/]+ 能匹配 %2F，decodeURIComponent 后即带出斜杠，越出预期的路径层级。
+function requireTaskId(res, taskId) {
+  if (isUuid(taskId)) return true;
+  sendJson(res, 400, { ok: false, error: 'taskId 必须是 UUID' });
+  return false;
+}
 
 const routes = [
   // 任务历史（REST 全量，前端本地分页）
@@ -46,6 +55,7 @@ const routes = [
   {
     method: 'GET', pattern: /^\/api\/tasks\/([^/]+)\/logs$/, handler: async (req, res, m) => {
       const taskId = decodeURIComponent(m[1]);
+      if (!requireTaskId(res, taskId)) return;
       if (await restReady()) {
         const r = await rest(`/tasks/${taskId}/logs`);
         if (r.ok && r.data) {
@@ -78,6 +88,7 @@ const routes = [
   {
     method: 'GET', pattern: /^\/api\/tasks\/([^/]+)\/video$/, handler: async (req, res, m) => {
       const taskId = decodeURIComponent(m[1]);
+      if (!requireTaskId(res, taskId)) return;
       let files = [];
       try {
         // 用异步 fs：录屏目录可能文件很多，原 readdirSync + 逐个 statSync 会整段阻塞事件循环
@@ -94,8 +105,10 @@ const routes = [
 
   // 打开视频播放器
   {
-    method: 'GET', pattern: /^\/api\/tasks\/([^/]+)\/video\/open$/, handler: async (req, res, m) => {
+    // 用 POST：该接口会在服务器上真的启动播放器（有副作用），按 HTTP 语义不该用 GET
+    method: 'POST', pattern: /^\/api\/tasks\/([^/]+)\/video\/open$/, handler: async (req, res, m) => {
       const taskId = decodeURIComponent(m[1]);
+      if (!requireTaskId(res, taskId)) return;
       let found = null;
       try {
         const all = await fsp.readdir(config.SCREENCAST_DIR);

@@ -9,9 +9,15 @@ export const TASK_STATUS = {
   5: { name: '运行中', cls: 'run' },
 };
 
+// 「文件/文件夹监控」在影刀里有两个名字：持久化的 TriggerType 是 folder，
+// 其 CLI 子命令名是 file（见 lib/business.js 与 pages/triggers.js 的类型映射）——它们是同一功能。
+// 因此共用同一个展示定义对象：既保证文案永远一致，也避免两个同义键各自漂移。
+// 注意：不要为了"去掉重复"把它们改成两个不同的名字，那会造出一个并不存在的类型区分。
+const FOLDER_TRIGGER = { name: '文件夹', cls: 'teal' };
+
 export const TRIGGER_TYPE = {
   schedule: { name: '定时', cls: 'blue' }, email: { name: '邮件', cls: 'purple' },
-  folder: { name: '文件夹', cls: 'teal' }, file: { name: '文件夹', cls: 'teal' },
+  folder: FOLDER_TRIGGER, file: FOLDER_TRIGGER,
   hotkey: { name: '热键', cls: 'plain cancel' },
 };
 

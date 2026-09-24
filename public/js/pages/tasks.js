@@ -129,7 +129,7 @@ async function renderTasks(page) {
     try {
       const r = await api(`/api/tasks/${encodeURIComponent(taskId)}/video`);
       if (r.ok && r.count > 0) {
-        await api(`/api/tasks/${encodeURIComponent(taskId)}/video/open`);
+        await api(`/api/tasks/${encodeURIComponent(taskId)}/video/open`, { method: 'POST' });
         toast(`已打开视频回放（${r.files[0].name}）`, 'ok');
       } else {
         toast('该任务没有视频回放文件', 'info');

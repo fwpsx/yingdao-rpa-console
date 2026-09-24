@@ -74,12 +74,12 @@ async function waitLogin(username, timeoutMs) {
 
 // 读取影刀账号配置（Account.xml），提取每个账号的显示名/企业名（CLI account list 不返回这些）
 function readAccountXml() {
-  const candidates = [
-    path.join(process.env.LOCALAPPDATA || '', 'ShadowBot', 'users', 'Account.xml'),
-    path.join(process.env.APPDATA || '', 'ShadowBot', 'users', 'Account.xml'),
-  ];
+  // 环境变量缺失时不能退化成相对路径：path.join('', 'ShadowBot', ...) 会相对进程 CWD 去找，
+  // 存在误命中的可能。这里直接跳过缺失的根目录。
+  const roots = [process.env.LOCALAPPDATA, process.env.APPDATA].filter(Boolean);
+  const candidates = roots.map((root) => path.join(root, 'ShadowBot', 'users', 'Account.xml'));
   for (const p of candidates) {
-    if (!p || !fs.existsSync(p)) continue;
+    if (!fs.existsSync(p)) continue;
     try {
       const xml = fs.readFileSync(p, 'utf-8');
       const out = new Map();

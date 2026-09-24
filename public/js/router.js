@@ -4,7 +4,7 @@
  * 依赖：utils.js、api.js
  * ============================================================ */
 import { el, $, $$ } from './utils.js';
-import { api, cli } from './api.js';
+import { api, cli, requestLogin } from './api.js';
 
 export const App = { account: null, module: 'dashboard', unread: 0 };
 
@@ -66,8 +66,18 @@ export async function refreshAccount() {
     chip.appendChild(el('span', {}, name));
     chip.appendChild(el('span', { class: 'badge ok plain', style: 'font-size:10.5px' }, '在线'));
   } else {
+    // 未登录：给出明确状态 + 显式登录入口。
+    // 自动弹窗在用户放弃后会被抑制，这里必须留一个可点的入口，否则用户无处登录。
     chip.innerHTML = '';
+    chip.title = '尚未登录控制台';
     chip.appendChild(el('span', { style: 'color:var(--danger);font-size:12.5px' }, '● 未登录'));
+    chip.appendChild(el('button', {
+      class: 'btn btn-ghost btn-sm',
+      onclick: async () => {
+        const t = await requestLogin();
+        if (t) { await refreshAccount(); navigate(App.module); } // 登录成功：刷新账号与当前页数据
+      },
+    }, '登录'));
   }
 }
 

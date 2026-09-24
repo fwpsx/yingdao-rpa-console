@@ -7,7 +7,7 @@ const auth = require('../lib/auth');
 const { rest, restReady, cachedRest } = require('../lib/rest');
 const { cachedCli, isCacheable, cliCommandPath, clearCache } = require('../lib/cli');
 const { sendJson, sendFile, getLanIP, readJsonBody } = require('../lib/utils');
-const { fetchAllGroups, fetchAllApps, checkAccountSwitch } = require('../lib/business');
+const { fetchAllGroups, fetchAllApps, normAccount, checkAccountSwitch } = require('../lib/business');
 
 // 静态资源 MIME 映射
 const MIME = {
@@ -144,16 +144,7 @@ const routes = [
           cachedRest('/triggers', 30000).catch(() => null),
           rest('/operator/state').catch(() => null),
         ]);
-        if (accR && accR.ok && accR.data) {
-          const a = accR.data.Account || accR.data.User || accR.data;
-          account = {
-            loggedIn: true,
-            userId: a.UserId || a.Id,
-            userName: a.UserName || a.Name || a.Email,
-            displayName: a.DisplayName || a.NickName,
-            accountType: a.AccountType,
-          };
-        }
+        if (accR && accR.ok) account = normAccount(accR.data); // 与 fetchCurrentAccount 同源
         if (appsAll) appCount = appsAll.length;
         if (trigR && trigR.ok) triggerCount = (trigR.data.Items || []).length;
         if (stateR && stateR.ok) health = stateR.data;
