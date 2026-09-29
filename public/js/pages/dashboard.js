@@ -4,16 +4,17 @@
 import { el, stagger, countUp, fmtTime } from '../utils.js';
 import { api, cli } from '../api.js';
 import { App, buildNav, navigate, register } from '../router.js';
-import { I } from '../constants.js';
+import { I, TASK_STATUS } from '../constants.js';
 
 async function renderDashboard(page) {
   page.appendChild(el('div', { class: 'loading-center' }, el('div', { class: 'spinner-lg' }), '正在获取系统状态…'));
 
   // 聚合接口（内部 4 并发 + 10s 缓存）+ 并发获取未读消息和扩展
-  const [statusR, msgR, extR] = await Promise.all([
+  const [statusR, msgR, extR, tasksR] = await Promise.all([
     api('/api/system/status').catch(() => ({ ok: false })),
     cli(['console', 'message', 'list', '--status', 'unread', '--size', '1']).catch(() => null),
     cli(['console', 'extension', 'list']).catch(() => null),
+    api('/api/tasks').catch(() => null), // 最近任务（真实数据）
   ]);
 
   const acc = statusR.ok && statusR.account && statusR.account.loggedIn ? statusR.account : null;
@@ -57,12 +58,20 @@ async function renderDashboard(page) {
       el('dt', {}, '用户 ID'), el('dd', { class: 'mono', style: 'font-family:var(--mono);font-size:12px' }, acc.userId || '-'),
     ) : el('div', { class: 'warn-banner' }, '⚠ 影刀客户端未登录，请先登录后使用控制台功能。')
   );
-  // 系统状态卡片
+  // 系统状态卡片：全部由 /operator/state 的真实字段推导，不再显示「未知 / -」
   const sysCard = el('div', { class: 'card fade-item' },
     el('div', { class: 'card-title' }, '系统状态', el('span', { class: 'hint' }, 'console-restapi')),
     el('dl', { class: 'kv' },
-      el('dt', {}, '服务状态'), el('dd', {}, el('span', { class: 'badge ' + (health.status === 'ready' ? 'ok' : 'fail') }, health.status || '未知')),
-      el('dt', {}, '服务名称'), el('dd', {}, health.service || '-'),
+      el('dt', {}, '服务状态'), el('dd', {}, health.state ? el('span', { class: 'badge ' + (health.stateClass || 'ok') }, health.state) : '-'),
+      el('dt', {}, '客户端模式'), el('dd', {}, health.mode
+        ? el('span', {},
+            el('span', { class: 'badge blue plain' }, health.mode),
+            health.module ? el('span', { style: 'color:var(--muted);font-size:12px' }, ' · ' + health.module) : null)
+        : '-'),
+      el('dt', {}, 'Studio'), el('dd', {}, health.studio || '-'),
+      ...(health.hasRunningTask && health.runningTaskName
+        ? [el('dt', {}, '运行中任务'), el('dd', { style: 'font-weight:500' }, health.runningTaskName)]
+        : []),
       el('dt', {}, '本机访问'), el('dd', { class: 'mono', style: 'font-size:12px' }, 'http://127.0.0.1:' + port),
       el('dt', {}, '局域网访问'), el('dd', { class: 'mono', style: 'font-size:12px' }, lanIP ? ('http://' + lanIP + ':' + port) : '未检测到'),
       el('dt', {}, '服务器时间'), el('dd', {}, fmtTime(new Date().toISOString())),
@@ -76,6 +85,23 @@ async function renderDashboard(page) {
   row.appendChild(accCard);
   row.appendChild(sysCard);
   page.appendChild(stagger(row));
+
+  // 最近任务（真实数据，不虚构）。取列表前 5 条（接口按创建时间倒序）
+  const recentTasks = ((tasksR && tasksR.ok && tasksR.data && tasksR.data.items) || []).slice(0, 5);
+  page.appendChild(stagger(el('div', { class: 'card fade-item mt16' },
+    el('div', { class: 'card-title' }, '最近任务',
+      el('button', { class: 'more', onclick: () => navigate('tasks') }, '查看全部 →')),
+    recentTasks.length
+      ? el('div', {}, recentTasks.map((t) => {
+          const st = TASK_STATUS[t.statusCode] || { name: String(t.statusCode || '未知'), cls: 'cancel' };
+          return el('div', { class: 'recent-task' },
+            el('span', { class: 'badge ' + st.cls }, st.name),
+            el('span', { class: 'rt-name' }, t.appName || t.sourceName || t.taskId),
+            el('span', { class: 'rt-time' }, fmtTime(t.createTime)),
+          );
+        }))
+      : el('div', { class: 'empty', style: 'padding:22px 0' }, '暂无任务记录'),
+  )));
 }
 
 register('dashboard', { title: '仪表盘', sub: '系统状态总览', icon: I.dashboard, render: renderDashboard });

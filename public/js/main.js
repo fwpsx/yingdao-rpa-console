@@ -16,6 +16,25 @@ import { buildNav, navigate, refreshAccount, updateLanAddr } from './router.js';
 import { logout } from './api.js';
 import { confirmModal } from './utils.js';
 
+// 移动端侧栏抽屉：汉堡打开，点遮罩/导航项收起；视口变宽时复位避免遮挡
+(function setupMobileNav() {
+  const menuBtn = document.getElementById('menu-btn');
+  const navMask = document.getElementById('nav-mask');
+  const sidebar = document.getElementById('sidebar');
+  const nav = document.getElementById('nav');
+  if (!menuBtn || !navMask || !sidebar || !nav) return;
+  const setOpen = (open) => {
+    sidebar.classList.toggle('open', open);
+    navMask.classList.toggle('show', open);
+  };
+  menuBtn.addEventListener('click', () => setOpen(true));
+  navMask.addEventListener('click', () => setOpen(false));
+  nav.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-item') && window.innerWidth <= 768) setOpen(false);
+  });
+  window.addEventListener('resize', () => { if (window.innerWidth > 768) setOpen(false); });
+})();
+
 (async function init() {
   // 退出登录按钮
   const logoutBtn = document.getElementById('logout-btn');

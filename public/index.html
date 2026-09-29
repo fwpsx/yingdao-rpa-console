@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>影刀 RPA 控制台</title>
+<!-- 内联 SVG favicon：蓝紫渐变圆角 + 闪电（自动化），ASCII 安全、无外部请求 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f6ef7'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M35 12 L20 36 h9 l-2 16 15-24 h-9 z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,6 +21,9 @@
   </aside>
   <main>
     <header id="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="打开菜单" title="菜单">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
       <div id="page-title"></div>
       <div style="display:flex;align-items:center;gap:10px">
         <div id="account-chip" title=""></div>
@@ -28,6 +33,7 @@
     <div id="page"></div>
   </main>
 </div>
+<div id="nav-mask"></div>
 <div id="toasts"></div>
 <div id="modal-root"></div>
 <script type="module" src="js/main.js"></script>

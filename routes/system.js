@@ -7,7 +7,7 @@ const auth = require('../lib/auth');
 const { rest, restReady, cachedRest } = require('../lib/rest');
 const { cachedCli, isCacheable, cliCommandPath, clearCache } = require('../lib/cli');
 const { sendJson, sendFile, getLanIP, readJsonBody } = require('../lib/utils');
-const { fetchAllGroups, fetchAllApps, normAccount, checkAccountSwitch } = require('../lib/business');
+const { fetchAllGroups, fetchAllApps, normAccount, normHealth, checkAccountSwitch } = require('../lib/business');
 
 // 静态资源 MIME 映射
 const MIME = {
@@ -147,7 +147,7 @@ const routes = [
         if (accR && accR.ok) account = normAccount(accR.data); // 与 fetchCurrentAccount 同源
         if (appsAll) appCount = appsAll.length;
         if (trigR && trigR.ok) triggerCount = (trigR.data.Items || []).length;
-        if (stateR && stateR.ok) health = stateR.data;
+        if (stateR && stateR.ok) health = normHealth(stateR.data); // 由真实字段推导，不再显示「未知」
         sendJson(res, 200, {
           ok: true, account, health, triggerCount, appCount,
           serverTime: new Date().toISOString(), via: 'rest',

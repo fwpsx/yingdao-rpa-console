@@ -416,8 +416,92 @@ label.check input { accent-color: var(--accent); width: 15px; height: 15px; curs
 .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 14px; font-size: 13px; }
 .kv dt { color: var(--muted); }
 .kv dd { word-break: break-all; }
+
+/* ================= 仪表盘 · 最近任务 ================= */
+.card-title .more {
+  margin-left: auto; background: none; border: none; font-family: var(--font);
+  color: var(--accent-2); font-size: 12.5px; cursor: pointer; font-weight: 500;
+  transition: color .15s ease;
+}
+.card-title .more:hover { color: var(--accent); text-decoration: underline; }
+.recent-task {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 2px; border-bottom: 1px solid var(--border);
+}
+.recent-task:last-child { border-bottom: none; }
+.recent-task .rt-name {
+  flex: 1; min-width: 0; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.recent-task .rt-time { flex-shrink: 0; color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+
 .fade-item { animation: fadeUp .4s ease both; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(.93) translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes popIn { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+
+/* ============================================================
+ * 响应式（断点：1024 平板 / 768 手机）
+ * 原则：移动端侧栏折叠为抽屉；内容区 100% 宽度；表格横向滚动；
+ *      body 水平溢出用 overflow-x: clip（不用 hidden，避免键盘/滚动被截断）。
+ * ============================================================ */
+.icon-btn {
+  display: none;
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  cursor: pointer; align-items: center; justify-content: center;
+  margin-right: 12px; flex-shrink: 0; font-family: var(--font);
+  transition: background .15s ease, border-color .15s ease;
+}
+.icon-btn:hover { background: var(--panel-3); border-color: var(--border-light); }
+
+@media (max-width: 1024px) {
+  /* 平板：侧栏收窄、减少内边距、双栏变单栏 */
+  :root { --sidebar-w: 196px; }
+  #page { padding: 20px 18px 36px; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  body { overflow-x: clip; }
+
+  .icon-btn { display: inline-flex; }
+
+  /* 侧栏变抽屉：默认移出视口，点汉堡滑入，点遮罩/导航项收起 */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    transform: translateX(-105%);
+    transition: transform .25s ease;
+    box-shadow: 0 0 44px rgba(15, 23, 42, .2);
+    z-index: 60;
+  }
+  #sidebar.open { transform: translateX(0); }
+  #nav-mask {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(15, 23, 42, .4); backdrop-filter: blur(2px);
+    opacity: 0; pointer-events: none; transition: opacity .25s ease;
+  }
+  #nav-mask.show { opacity: 1; pointer-events: auto; }
+
+  /* 顶栏压缩：标题单行截断、隐藏副标题，避免与账号区互相挤压 */
+  #topbar { padding: 0 12px; }
+  #page-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #page-title small { display: none; }
+  #logout-btn { flex-shrink: 0; }
+
+  #page { padding: 16px 12px 32px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+  /* 步骤条与表格横向滚动（触控顺滑） */
+  .steps { overflow-x: auto; }
+  .step .s-label { font-size: 12px; }
+  .tbl-wrap { -webkit-overflow-scrolling: touch; }
+
+  /* 模态框贴边 */
+  .modal, .modal.wide { width: auto; margin: 0 10px; max-width: none; }
+  .modal-head, .modal-body, .modal-foot { padding-left: 16px; padding-right: 16px; }
+
+  .toolbar { gap: 8px; }
+}
